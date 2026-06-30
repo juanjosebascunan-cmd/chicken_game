@@ -1,0 +1,580 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>🐔 Why Did the Chicken Cross the Road? — Multiplayer</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; overflow: hidden; background: #1a1a2e; font-family: 'Courier New', monospace; }
+canvas { display: block; }
+#hud {
+  position: fixed; top: 10px; left: 50%; transform: translateX(-50%);
+  display: flex; gap: 16px; align-items: center;
+  background: rgba(0,0,0,0.7); border: 2px solid #FFD700;
+  border-radius: 8px; padding: 6px 18px; pointer-events: none; z-index: 10;
+}
+.p-hud { display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 90px; }
+.p-name { font-size: 13px; font-weight: bold; }
+.p-stats { font-size: 13px; }
+.p1c { color: #66ffcc; }
+.p2c { color: #ff8844; }
+.divider { color: #FFD700; font-size: 20px; }
+#overlay {
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(0,0,0,0.88);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  color: #fff; z-index: 20; padding: 16px;
+}
+#overlay.hidden { display: none; }
+#overlay h1 { font-size: clamp(20px,5vw,46px); color: #FFD700; text-align: center; margin: 0 0 8px; text-shadow: 0 0 20px #FFD700aa; }
+#overlay p { font-size: clamp(13px,2.5vw,17px); color: #ccc; text-align: center; margin: 5px 0; max-width: 480px; }
+#invite-box {
+  background: rgba(255,255,255,0.07); border: 1px solid #FFD700;
+  border-radius: 8px; padding: 14px 18px; margin: 14px 0; text-align: center; max-width: 440px; width: 95%;
+}
+#invite-box .lbl { color: #FFD700; font-size: 14px; margin: 0 0 8px; }
+#invite-link {
+  width: 100%; padding: 8px; background: #0a0a1a; color: #66ffcc;
+  border: 1px solid #444; border-radius: 4px; font-family: monospace; font-size: 12px;
+  cursor: pointer; word-break: break-all;
+}
+#btn-copy { margin-top: 8px; padding: 8px 20px; background: #FFD700; color: #1a1a2e; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-family: 'Courier New',monospace; font-size: 14px; }
+#btn-reset { margin-top: 20px; padding: 14px 44px; font-size: clamp(15px,3vw,22px); font-weight: bold; background: #FFD700; color: #1a1a2e; border: none; border-radius: 8px; cursor: pointer; font-family: 'Courier New',monospace; display: none; }
+.mode-btn { padding: 13px 30px; font-size: clamp(15px,3vw,19px); font-weight: bold; background: #FFD700; color: #1a1a2e; border: none; border-radius: 8px; cursor: pointer; font-family: 'Courier New',monospace; min-width: 230px; transition: transform 0.1s; }
+.mode-btn:hover { transform: scale(1.05); }
+.mode-versus { background: #66ffcc; }
+.mode-small { min-width: auto; padding: 7px 14px; font-size: 13px; background: rgba(255,215,0,0.85); }
+#status-msg { font-size: clamp(18px,4vw,30px); font-weight: bold; margin: 10px 0; text-align: center; min-height: 2em; }
+#score-summary { font-size: clamp(14px,2.5vw,18px); color: #aaa; text-align: center; margin: 6px 0; }
+#conn-status { font-size: 13px; color: #888; margin: 6px 0; text-align: center; }
+#err { color: #ff6666; font-size: 13px; min-height: 18px; text-align: center; }
+/* Touch controls */
+#touch-pad {
+  position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%);
+  display: none; flex-direction: column; align-items: center; gap: 8px; z-index: 10;
+}
+.t-row { display: flex; gap: 8px; }
+.tbtn {
+  width: 64px; height: 64px; border-radius: 50%;
+  background: rgba(255,255,255,0.18); border: 2px solid rgba(255,255,255,0.4);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 26px; user-select: none; -webkit-user-select: none; touch-action: none; cursor: pointer;
+}
+#dev { position: fixed; top: 4px; left: 4px; color: #0f0; font: 11px monospace; display: none; pointer-events: none; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="hud">
+  <div class="p-hud p1c" id="hud-p1"><span class="p-name">🐔 P1</span><span class="p-stats">❤️❤️❤️ ⭐0</span></div>
+  <span class="divider">VS</span>
+  <div class="p-hud p2c" id="hud-p2"><span class="p-name">🐓 P2</span><span class="p-stats">❤️❤️❤️ ⭐0</span></div>
+</div>
+<div id="overlay">
+  <h1>🐔 Why Did the Chicken<br>Cross the Road?</h1>
+  <p style="color:#FFD700;font-size:clamp(15px,3vw,22px);margin:4px 0;font-weight:bold">⚡ MULTIJUGADOR ONLINE</p>
+  <div id="status-msg">Conectando…</div>
+  <div id="conn-status"></div>
+
+  <div id="mode-select" style="display:none">
+    <div style="display:flex;flex-direction:column;gap:10px;align-items:center;margin:8px 0 4px">
+      <button class="mode-btn" id="btn-solo">🐔 Jugar Solo</button>
+      <button class="mode-btn" id="btn-bot">🤖 Jugar vs Bot</button>
+      <button class="mode-btn mode-versus" id="btn-versus">👥 Esperar a un Amigo</button>
+    </div>
+  </div>
+
+  <div id="invite-box" style="display:none">
+    <div class="lbl">📋 Comparte este link con tu rival:</div>
+    <input id="invite-link" readonly onclick="this.select()">
+    <br><button id="btn-copy">📋 Copiar Link</button>
+    <div style="margin-top:10px"><button class="mode-btn mode-small" id="btn-solo-2">🐔 Mejor juego solo</button> <button class="mode-btn mode-small" id="btn-bot-2">🤖 vs Bot</button></div>
+  </div>
+
+  <p id="controls-hint" style="color:#888;font-size:clamp(11px,2vw,14px)">⬆ W / ⬇ S / ⬅ A / ➡ D &nbsp;|&nbsp; Flechas también</p>
+  <div id="score-summary"></div>
+  <button id="btn-reset">🔄 JUGAR DE NUEVO</button>
+  <div id="err"></div>
+</div>
+
+<div id="touch-pad">
+  <div class="t-row"><div class="tbtn" id="t-up">⬆️</div></div>
+  <div class="t-row">
+    <div class="tbtn" id="t-left">⬅️</div>
+    <div class="tbtn" id="t-down">⬇️</div>
+    <div class="tbtn" id="t-right">➡️</div>
+  </div>
+</div>
+<div id="dev"></div>
+
+<script>
+// ---- Room & Identity ----
+// FIX: playerId uses sessionStorage so DIFFERENT browser tabs get different IDs,
+// but the same tab after F5 reconnects with the same ID (intended behaviour).
+// Two players opening the SAME URL in the same browser: they must use different tabs —
+// sessionStorage is per-tab, so each tab gets its own ID automatically.
+const params = new URLSearchParams(location.search);
+let room = params.get("room");
+if (!room) {
+  room = Math.random().toString(36).slice(2, 8);
+  params.set("room", room);
+  history.replaceState(null, "", location.pathname + "?" + params);
+}
+
+// FIX: key includes the room so joining two different rooms on same tab creates separate IDs
+const SESSION_KEY = "chicken-mp-id-" + room;
+let playerId = sessionStorage.getItem(SESSION_KEY);
+if (!playerId) {
+  playerId = "p-" + Math.random().toString(36).slice(2, 10);
+  sessionStorage.setItem(SESSION_KEY, playerId);
+}
+
+const inviteUrl = location.href;
+const inviteLink = document.getElementById("invite-link");
+inviteLink.value = inviteUrl;
+document.getElementById("btn-copy").onclick = () => {
+  navigator.clipboard?.writeText(inviteUrl).catch(() => {
+    inviteLink.select(); document.execCommand("copy");
+  });
+  document.getElementById("btn-copy").textContent = "✅ ¡Copiado!";
+  setTimeout(() => document.getElementById("btn-copy").textContent = "📋 Copiar Link", 2000);
+};
+
+// ---- Canvas ----
+const canvas = document.getElementById("c");
+const ctx = canvas.getContext("2d");
+let W = 0, H = 0;
+const DPR_CAP = 1.5;
+function resize() {
+  const dpr = Math.min(devicePixelRatio || 1, DPR_CAP);
+  W = innerWidth; H = innerHeight;
+  canvas.width = W * dpr; canvas.height = H * dpr;
+  canvas.style.width = W + "px"; canvas.style.height = H + "px";
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+addEventListener("resize", resize);
+addEventListener("orientationchange", resize);
+resize();
+
+// ---- Input ----
+const BIND = {
+  KeyW:"up", KeyS:"down", KeyA:"left", KeyD:"right",
+  ArrowUp:"up", ArrowDown:"down", ArrowLeft:"left", ArrowRight:"right"
+};
+const held = new Set();
+const justPressed = new Set();
+addEventListener("keydown", e => {
+  const c = BIND[e.code];
+  if (c) { if (!held.has(c)) justPressed.add(c); held.add(c); e.preventDefault(); }
+});
+addEventListener("keyup", e => { const c = BIND[e.code]; if (c) held.delete(c); });
+
+const tdefs = { "t-up":"up","t-down":"down","t-left":"left","t-right":"right" };
+for (const [id, cmd] of Object.entries(tdefs)) {
+  const el = document.getElementById(id);
+  if (!el) continue;
+  el.addEventListener("touchstart", e => { justPressed.add(cmd); e.preventDefault(); }, {passive:false});
+  el.addEventListener("touchend", e => e.preventDefault(), {passive:false});
+}
+if ("ontouchstart" in window) document.getElementById("touch-pad").style.display = "flex";
+
+// ---- WebSocket with robust reconnect ----
+// FIX: build WS URL from location so it works under any subpath the platform assigns
+const base = location.pathname.replace(/\/+$/, "");
+const wsProto = location.protocol === "https:" ? "wss://" : "ws://";
+const wsUrl = wsProto + location.host + base + "/ws/" + room;
+
+let ws = null;
+let latestState = null;
+let isSpectator = false;
+let reconnectTimer = null;
+let wsReady = false;
+
+function send(obj) {
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify(obj));
+  }
+}
+
+function connect() {
+  if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
+  wsReady = false;
+  setConnStatus("Conectando al servidor…");
+
+  try { ws = new WebSocket(wsUrl); } catch(e) {
+    setConnStatus("Error de conexión — reintentando…");
+    reconnectTimer = setTimeout(connect, 2000);
+    return;
+  }
+
+  // FIX: send join on open so it never fires before socket is ready
+  ws.onopen = () => {
+    wsReady = true;
+    document.getElementById("err").textContent = "";
+    setConnStatus("Conectado ✓");
+    send({ type: "join", playerId });
+  };
+
+  ws.onclose = (e) => {
+    wsReady = false;
+    setConnStatus("Desconectado (código " + e.code + ") — reconectando…");
+    reconnectTimer = setTimeout(connect, 1800);
+  };
+
+  ws.onerror = () => {
+    setConnStatus("Error WS — reintentando…");
+  };
+
+  ws.onmessage = (e) => {
+    let msg;
+    try { msg = JSON.parse(e.data); } catch { return; }
+    document.getElementById("err").textContent = "";
+
+    if (msg.type === "error") {
+      document.getElementById("err").textContent = "⚠ " + msg.error;
+      return;
+    }
+    if (msg.type === "spectate") {
+      isSpectator = true;
+    }
+    if (msg.type === "state") {
+      latestState = msg;
+      applyUI(msg);
+    }
+  };
+}
+connect();
+
+// ---- UI state machine ----
+const overlay = document.getElementById("overlay");
+const statusMsg = document.getElementById("status-msg");
+const btnReset = document.getElementById("btn-reset");
+const inviteBox = document.getElementById("invite-box");
+const controlsHint = document.getElementById("controls-hint");
+const scoreSummary = document.getElementById("score-summary");
+const modeSelect = document.getElementById("mode-select");
+
+btnReset.onclick = () => send({ type: "reset" });
+
+// Mode buttons
+function chooseMode(mode) { send({ type: "start_mode", mode }); }
+document.getElementById("btn-solo").onclick    = () => chooseMode("solo");
+document.getElementById("btn-bot").onclick     = () => chooseMode("bot");
+document.getElementById("btn-versus").onclick  = () => {
+  // Show invite link, keep waiting for a real friend
+  modeSelect.style.display = "none";
+  inviteBox.style.display = "block";
+  statusMsg.textContent = "👥 Esperando a un amigo…";
+};
+document.getElementById("btn-solo-2").onclick  = () => chooseMode("solo");
+document.getElementById("btn-bot-2").onclick   = () => chooseMode("bot");
+
+function setConnStatus(txt) {
+  document.getElementById("conn-status").textContent = txt;
+}
+
+function applyUI(s) {
+  if (s.status === "waiting") {
+    overlay.classList.remove("hidden");
+    // Two seats already filled (a friend joined) → server will auto-start versus.
+    const humanCount = s.seats ? s.seats.length : 1;
+    if (humanCount >= 2) {
+      statusMsg.textContent = "⚡ ¡Rival conectado! Empezando…";
+      modeSelect.style.display = "none";
+      inviteBox.style.display = "none";
+    } else {
+      statusMsg.textContent = "🎮 ¿Cómo quieres jugar?";
+      modeSelect.style.display = "block";
+      // invite box stays hidden until they pick "esperar amigo"
+    }
+    btnReset.style.display = "none";
+    controlsHint.style.display = "block";
+    scoreSummary.textContent = "";
+    document.getElementById("touch-pad").style.display = "none";
+    return;
+  }
+
+  if (s.status === "playing") {
+    overlay.classList.add("hidden");
+    modeSelect.style.display = "none";
+    if ("ontouchstart" in window) document.getElementById("touch-pad").style.display = "flex";
+    return;
+  }
+
+  if (s.status === "over") {
+    overlay.classList.remove("hidden");
+    modeSelect.style.display = "none";
+    inviteBox.style.display = "none";
+    controlsHint.style.display = "none";
+    btnReset.style.display = "block";
+    document.getElementById("touch-pad").style.display = "none";
+
+    const v = s.view;
+    const w = s.result?.winner;
+    const isSpect = s.you === "__spectator__" || isSpectator;
+    const isSolo = (s.mode === "solo") || (v?.mode === "solo");
+
+    if (isSolo) {
+      // Solo: no "win/lose vs rival" — just survival result
+      const me = v?.players?.[s.you];
+      if (me?.finished) statusMsg.textContent = "🎉 ¡Cruzaste! ⭐" + me.score;
+      else statusMsg.textContent = "💀 ¡Game Over! ⭐" + (me?.score ?? 0);
+    } else if (isSpect) {
+      const wp = v?.players?.[w];
+      statusMsg.textContent = wp ? `🏆 ¡${wp.name} GANA!` : "🏁 Fin del juego";
+    } else if (w) {
+      statusMsg.textContent = w === s.you ? "🏆 ¡GANASTE!" : "💀 ¡Perdiste!";
+    } else {
+      statusMsg.textContent = "🏁 ¡Fin del juego!";
+    }
+
+    // Score breakdown
+    if (v?.players) {
+      const lines = Object.values(v.players)
+        .sort((a,b) => a.seat - b.seat)
+        .map(p => `${p.name}: ⭐${p.score}${p.finished ? " 🏁" : p.dead ? " 💀" : ""}`)
+        .join("   |   ");
+      scoreSummary.textContent = lines;
+    }
+  }
+}
+
+// ---- HUD ----
+function updateHUD(v) {
+  if (!v?.players) return;
+  const pList = Object.entries(v.players).sort(([,a],[,b]) => a.seat - b.seat);
+  const hudEls = [document.getElementById("hud-p1"), document.getElementById("hud-p2")];
+  const divider = document.querySelector("#hud .divider");
+  const isSolo = pList.length < 2;
+
+  // Solo: show only one chicken, hide the VS divider and the P2 slot
+  hudEls[1].style.display = isSolo ? "none" : "flex";
+  if (divider) divider.style.display = isSolo ? "none" : "inline";
+
+  pList.forEach(([id, p], i) => {
+    const el = hudEls[i];
+    if (!el) return;
+    el.style.display = "flex";
+    const isMe = id === v.you;
+    const emoji = p.isBot ? "🤖" : (p.seat === 0 ? "🐔" : "🐓");
+    const nameTag = isMe ? `${emoji} TÚ` : `${emoji} ${p.name}`;
+    const hearts = p.dead ? "💀" : "❤️".repeat(Math.max(0, p.lives)) || "🖤";
+    el.innerHTML = `<span class="p-name">${nameTag}</span><span class="p-stats">${hearts} ⭐${p.score}${p.finished ? "🏁" : ""}</span>`;
+  });
+}
+
+// ---- Camera ----
+let camY = 0;
+function updateCamera(v) {
+  if (!v?.players) return;
+  const me = v.players[v.you];
+  if (!me || !v.lanes) return;
+  const totalLanes = v.lanes.length;
+  const laneH = H / totalLanes;
+  const target = me.y * laneH - H * 0.55;
+  camY += (target - camY) * 0.1;
+}
+
+// ---- Drawing ----
+const TILE = 64;
+const P_COLORS = ["#66ffcc", "#ff8844"];
+
+function drawVehicle(x, y, w, h, type, dir) {
+  ctx.save();
+  ctx.translate(x, y);
+  if (dir < 0) ctx.scale(-1, 1);
+  const color = type === "bus" ? "#2255CC" : "#CC3322";
+  ctx.beginPath();
+  ctx.moveTo(-w/2, h/4); ctx.lineTo(-w/2+w*0.1, -h/2);
+  ctx.lineTo(w/2-w*0.1, -h/2); ctx.lineTo(w/2, h/4);
+  ctx.closePath();
+  ctx.fillStyle = color; ctx.fill();
+  ctx.strokeStyle = "#222"; ctx.lineWidth = 2; ctx.stroke();
+  // Window highlight
+  ctx.beginPath();
+  ctx.moveTo(-w*0.1,-h/2); ctx.lineTo(w*0.2,-h/2); ctx.lineTo(w*0.3,h*0.05); ctx.lineTo(-w*0.15,h*0.05);
+  ctx.closePath(); ctx.fillStyle = "rgba(255,255,255,0.15)"; ctx.fill();
+  // Wheels
+  ctx.fillStyle = "#111";
+  for (const wx of [-w*0.3, w*0.3]) {
+    ctx.beginPath(); ctx.ellipse(wx, h/4+2, w*0.12, h*0.17, 0, 0, Math.PI*2); ctx.fill();
+    ctx.strokeStyle="#555"; ctx.lineWidth=1.5; ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function drawChicken(x, y, size, seat, hitCooldown, finished, dead) {
+  if (dead) return;
+  ctx.save();
+  ctx.translate(x, y);
+  if (hitCooldown) {
+    // Flicker when hit
+    ctx.globalAlpha = 0.3 + 0.7 * Math.abs(Math.sin(Date.now() * 0.025));
+  }
+  const bodyColor = seat === 0 ? "#F5E642" : "#FF9933";
+  const outlineColor = seat === 0 ? "#8B7000" : "#8B4000";
+  const glowColor = P_COLORS[seat];
+
+  // Player glow ring
+  ctx.beginPath(); ctx.arc(size*0.1, -size*0.55, size*0.33, 0, Math.PI*2);
+  ctx.strokeStyle = glowColor; ctx.lineWidth = 3; ctx.stroke();
+
+  // Body
+  ctx.beginPath();
+  ctx.moveTo(0,-size*0.5); ctx.lineTo(size*0.4,0); ctx.lineTo(size*0.3,size*0.5);
+  ctx.lineTo(-size*0.3,size*0.5); ctx.lineTo(-size*0.4,0); ctx.closePath();
+  ctx.fillStyle = bodyColor; ctx.fill(); ctx.strokeStyle = outlineColor; ctx.lineWidth = 2.5; ctx.stroke();
+  // Head
+  ctx.beginPath(); ctx.arc(size*0.1,-size*0.55,size*0.25,0,Math.PI*2);
+  ctx.fillStyle = bodyColor; ctx.fill(); ctx.strokeStyle = outlineColor; ctx.lineWidth = 2; ctx.stroke();
+  // Eye
+  ctx.beginPath(); ctx.arc(size*0.2,-size*0.6,size*0.07,0,Math.PI*2); ctx.fillStyle="#222"; ctx.fill();
+  // Beak
+  ctx.beginPath(); ctx.moveTo(size*0.35,-size*0.52); ctx.lineTo(size*0.5,-size*0.5);
+  ctx.lineTo(size*0.35,-size*0.45); ctx.closePath(); ctx.fillStyle="#FF7700"; ctx.fill();
+  // Comb
+  ctx.beginPath(); ctx.moveTo(-size*0.05,-size*0.78); ctx.lineTo(size*0.02,-size*0.88);
+  ctx.lineTo(size*0.1,-size*0.78); ctx.fillStyle="#FF3333"; ctx.fill();
+  // Wings
+  ctx.beginPath(); ctx.moveTo(-size*0.35,-size*0.1); ctx.lineTo(-size*0.55,size*0.15);
+  ctx.lineTo(-size*0.2,size*0.2); ctx.closePath();
+  ctx.fillStyle = seat===0?"#E8D800":"#E87000"; ctx.fill(); ctx.strokeStyle=outlineColor; ctx.lineWidth=1.5; ctx.stroke();
+  // Feet
+  ctx.strokeStyle="#FF8C00"; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.moveTo(-size*0.15,size*0.5); ctx.lineTo(-size*0.15,size*0.7); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(size*0.15,size*0.5); ctx.lineTo(size*0.15,size*0.7); ctx.stroke();
+  // Crown if finished
+  if (finished) {
+    ctx.globalAlpha = 1;
+    ctx.font = `${size*0.7}px serif`;
+    ctx.textAlign = "center";
+    ctx.fillText("👑", size*0.1, -size*1.05);
+  }
+  ctx.restore();
+}
+
+function drawCoin(x, y, r) {
+  const yy = y + Math.sin(Date.now()*0.004 + x*0.05)*4;
+  ctx.save(); ctx.translate(x,yy);
+  ctx.beginPath();
+  for (let i=0;i<5;i++) {
+    const a=i*Math.PI*2/5-Math.PI/2, b=a+Math.PI/5;
+    if(i===0)ctx.moveTo(Math.cos(a)*r,Math.sin(a)*r); else ctx.lineTo(Math.cos(a)*r,Math.sin(a)*r);
+    ctx.lineTo(Math.cos(b)*r*0.45,Math.sin(b)*r*0.45);
+  }
+  ctx.closePath();
+  ctx.fillStyle="#66ff66"; ctx.shadowColor="#66ff66"; ctx.shadowBlur=10; ctx.fill();
+  ctx.strokeStyle="#00aa00"; ctx.lineWidth=1.5; ctx.stroke();
+  ctx.restore();
+}
+
+function render() {
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle="#1a1a2e"; ctx.fillRect(0,0,W,H);
+
+  const s = latestState;
+  if (!s?.view?.lanes) return;
+
+  const v = s.view;
+  const lanes = v.lanes;
+  const totalLanes = lanes.length;
+  const laneH = H / totalLanes;
+
+  updateCamera(v);
+  updateHUD(v);
+
+  ctx.save();
+  ctx.translate(0, -camY);
+
+  for (let i = 0; i < totalLanes; i++) {
+    const lane = lanes[i];
+    const laneY = i * laneH;
+
+    if (lane.type === "safe") {
+      ctx.fillStyle = "#3d7a3d"; ctx.fillRect(0,laneY,W,laneH);
+      ctx.strokeStyle="rgba(0,0,0,0.1)"; ctx.lineWidth=1;
+      for(let gx=0;gx<W;gx+=18){ctx.beginPath();ctx.moveTo(gx,laneY);ctx.lineTo(gx,laneY+laneH);ctx.stroke();}
+    } else if (lane.type === "goal") {
+      ctx.fillStyle = "#2d6e2d"; ctx.fillRect(0,laneY,W,laneH);
+      ctx.fillStyle="#FFD700";
+      for(let gx=0;gx<W;gx+=32){ctx.fillRect(gx,laneY,16,5);ctx.fillRect(gx+16,laneY+laneH-5,16,5);}
+      ctx.fillStyle="rgba(255,215,0,0.1)"; ctx.fillRect(0,laneY,W,laneH);
+    } else {
+      ctx.fillStyle="#2a2a2a"; ctx.fillRect(0,laneY,W,laneH);
+      ctx.strokeStyle="rgba(255,220,0,0.4)"; ctx.lineWidth=2; ctx.setLineDash([20,14]);
+      ctx.beginPath(); ctx.moveTo(0,laneY+laneH/2); ctx.lineTo(W,laneY+laneH/2); ctx.stroke();
+      ctx.setLineDash([]);
+      for(const veh of lane.vehicles){
+        const dir = veh.dir ?? (veh.speed>0?1:-1);
+        drawVehicle(veh.x, laneY+laneH/2, veh.w, veh.h, veh.type, dir);
+      }
+      if(lane.coins) for(const c of lane.coins){
+        if(!c.collected){
+          drawCoin(W/2+c.col*TILE, laneY+laneH/2, 12);
+        }
+      }
+    }
+    ctx.strokeStyle="rgba(0,0,0,0.2)"; ctx.lineWidth=1; ctx.setLineDash([]);
+    ctx.beginPath(); ctx.moveTo(0,laneY); ctx.lineTo(W,laneY); ctx.stroke();
+  }
+
+  // Players
+  if (v.players) {
+    const pList = Object.entries(v.players).sort(([,a],[,b]) => a.seat - b.seat);
+    for (const [id, p] of pList) {
+      const px = W/2 + p.x * TILE;
+      const py = p.y * laneH + laneH/2;
+      const size = Math.min(laneH * 0.76, 44);
+      drawChicken(px, py, size, p.seat, p.hitCooldown, p.finished, p.dead);
+    }
+  }
+
+  ctx.restore();
+
+  // Vignette
+  const gr = ctx.createRadialGradient(W/2,H/2,H*0.3,W/2,H/2,H);
+  gr.addColorStop(0,"rgba(0,0,0,0)"); gr.addColorStop(1,"rgba(0,0,0,0.4)");
+  ctx.fillStyle=gr; ctx.fillRect(0,0,W,H);
+}
+
+// ---- Send movement ----
+function processInput() {
+  if (!latestState || latestState.status !== "playing" || isSpectator) {
+    justPressed.clear(); return;
+  }
+  const me = latestState.view?.players?.[playerId];
+  if (!me || me.dead || me.finished) { justPressed.clear(); return; }
+
+  let dx=0, dy=0;
+  if (justPressed.has("up"))         dy = -1;
+  else if (justPressed.has("down"))  dy =  1;
+  else if (justPressed.has("left"))  dx = -1;
+  else if (justPressed.has("right")) dx =  1;
+
+  if (dx !== 0 || dy !== 0) send({ type: "move", dx, dy });
+  justPressed.clear();
+}
+
+// ---- Game loop ----
+const STEP = 1000/60;
+let acc=0, last=performance.now(), frames=0, fpsAt=last;
+const devMode = new URLSearchParams(location.search).has("dev");
+if (devMode) document.getElementById("dev").style.display = "block";
+
+function frame(now) {
+  requestAnimationFrame(frame);
+  acc += now-last; last=now;
+  processInput();
+  while(acc >= STEP) acc -= STEP;
+  render();
+  if(devMode && (frames++, now-fpsAt>=500)){
+    const fps=Math.round(frames*1000/(now-fpsAt)); frames=0; fpsAt=now;
+    document.getElementById("dev").textContent =
+      `${fps}fps | ${latestState?.status||"?"} | ws:${ws?.readyState} | ${playerId.slice(0,8)} | room:${room}`;
+  }
+}
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

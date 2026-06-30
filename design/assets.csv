@@ -1,0 +1,7 @@
+id,role,type,description,size_ratio,style_line_ref,source
+chicken_p1,player1_sprite,sprite,yellow polygon chicken character p1,1:1,formula,generate
+chicken_p2,player2_sprite,sprite,orange polygon chicken character p2,1:1,formula,generate
+truck,hazard_sprite,sprite,red angular pickup truck,1:1,formula,generate
+bus,hazard_sprite,sprite,blue angular bus,1:1,formula,generate
+coin,collectible_sprite,sprite,glowing acid-green star collectible,1:1,formula,generate
+road_bg,background,background,top-down multi-lane road crossing,16:9,formula,generate
