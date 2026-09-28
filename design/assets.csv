@@ -5,3 +5,5 @@ truck,hazard_sprite,sprite,red angular pickup truck,1:1,formula,generate
 bus,hazard_sprite,sprite,blue angular bus,1:1,formula,generate
 coin,collectible_sprite,sprite,glowing acid-green star collectible,1:1,formula,generate
 road_bg,background,background,top-down multi-lane road crossing,16:9,formula,generate
+asphalt,lane_texture,texture,seamless dark asphalt tile for road lanes,4:3,formula,generate
+grass,lane_texture,texture,seamless low-poly grass tile for safe/goal lanes,4:3,formula,generate

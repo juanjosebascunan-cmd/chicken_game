@@ -1,0 +1,11 @@
+{
+  "_comment": "Sprites generated with Higgsfield (gpt_image_2_5). The game loads assets/<id>.png first and falls back to the CDN url, then to procedural drawing. Run scripts/fetch-assets.sh to vendor the PNGs locally.",
+  "chicken_p1": { "job_id": "48680e58-5b45-4644-8cc2-7b5c636804f7", "url": "https://d8j0ntlcm91z4.cloudfront.net/user_33ybGTAWWWHyvQqc4i5PNV6sZGb/hf_20260928_134238_48680e58-5b45-4644-8cc2-7b5c636804f7.png" },
+  "chicken_p2": { "job_id": "ee30175a-1ffc-468a-bcf0-1e1c2d0feabc", "url": "https://d8j0ntlcm91z4.cloudfront.net/user_33ybGTAWWWHyvQqc4i5PNV6sZGb/hf_20260928_134234_ee30175a-1ffc-468a-bcf0-1e1c2d0feabc.png" },
+  "truck":      { "job_id": "caf50715-9595-4406-9fc2-7d586327d9ce", "url": "https://d8j0ntlcm91z4.cloudfront.net/user_33ybGTAWWWHyvQqc4i5PNV6sZGb/hf_20260928_134232_caf50715-9595-4406-9fc2-7d586327d9ce.png" },
+  "bus":        { "job_id": "d5e47d42-3f44-4dcf-8b22-ef41443d3cd8", "url": "https://d8j0ntlcm91z4.cloudfront.net/user_33ybGTAWWWHyvQqc4i5PNV6sZGb/hf_20260928_134235_d5e47d42-3f44-4dcf-8b22-ef41443d3cd8.png" },
+  "coin":       { "job_id": "0a1e9e09-8b66-4f59-84dc-429d7b207af2", "url": "https://d8j0ntlcm91z4.cloudfront.net/user_33ybGTAWWWHyvQqc4i5PNV6sZGb/hf_20260928_134234_0a1e9e09-8b66-4f59-84dc-429d7b207af2.png" },
+  "road_bg":    { "job_id": "478c379b-844c-4b5c-b428-085b8d416787", "url": "https://d8j0ntlcm91z4.cloudfront.net/user_33ybGTAWWWHyvQqc4i5PNV6sZGb/hf_20260928_134236_478c379b-844c-4b5c-b428-085b8d416787.png" },
+  "asphalt":    { "job_id": "62648119-eed3-4d11-a215-89680fdee2de", "url": "https://d8j0ntlcm91z4.cloudfront.net/user_33ybGTAWWWHyvQqc4i5PNV6sZGb/hf_20260928_134235_62648119-eed3-4d11-a215-89680fdee2de.png" },
+  "grass":      { "job_id": "e0888323-dc22-4d13-ae36-e3dc5ec275b6", "url": "https://d8j0ntlcm91z4.cloudfront.net/user_33ybGTAWWWHyvQqc4i5PNV6sZGb/hf_20260928_134234_e0888323-dc22-4d13-ae36-e3dc5ec275b6.png" }
+}

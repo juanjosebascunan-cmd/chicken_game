@@ -22,7 +22,7 @@ canvas { display: block; }
 .divider { color: #FFD700; font-size: 20px; }
 #overlay {
   position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-  background: rgba(0,0,0,0.88);
+  background: rgba(0,0,0,0.88) center / cover no-repeat;
   display: flex; flex-direction: column; align-items: center; justify-content: center;
   color: #fff; z-index: 20; padding: 16px;
 }
@@ -372,8 +372,43 @@ function updateCamera(v) {
   if (!me || !v.lanes) return;
   const totalLanes = v.lanes.length;
   const laneH = H / totalLanes;
-  const target = me.y * laneH - H * 0.55;
+  // Clamp so the camera never scrolls past the top/bottom of the road
+  const target = Math.max(0, Math.min(totalLanes * laneH - H, me.y * laneH - H * 0.55));
   camY += (target - camY) * 0.1;
+}
+
+// ---- Sprites (generated with Higgsfield, see assets/manifest.json) ----
+// Each sprite tries assets/<id>.png, then the CDN url from the manifest; if both
+// fail the procedural drawing below is used, so the game always renders.
+const SPRITES = {};
+const PATTERNS = {};
+function loadSprite(id, urls) {
+  const img = new Image();
+  let i = 0;
+  img.onload = () => {
+    SPRITES[id] = img;
+    if (id === "road_bg") overlay.style.backgroundImage =
+      `linear-gradient(rgba(10,10,30,0.72),rgba(10,10,30,0.88)), url("${img.src}")`;
+  };
+  img.onerror = () => { if (++i < urls.length) img.src = urls[i]; };
+  img.src = urls[0];
+}
+fetch("assets/manifest.json").then(r => r.ok ? r.json() : {}).catch(() => ({})).then(m => {
+  for (const id of ["chicken_p1","chicken_p2","truck","bus","coin","road_bg","asphalt","grass"]) {
+    loadSprite(id, ["assets/" + id + ".png", m[id]?.url].filter(Boolean));
+  }
+});
+function pattern(id) {
+  const img = SPRITES[id];
+  if (!img) return null;
+  if (!PATTERNS[id]) {
+    // Downscale the texture so the tile repeats at a sensible size
+    const t = document.createElement("canvas");
+    t.width = 256; t.height = Math.round(256 * img.height / img.width);
+    t.getContext("2d").drawImage(img, 0, 0, t.width, t.height);
+    PATTERNS[id] = ctx.createPattern(t, "repeat");
+  }
+  return PATTERNS[id];
 }
 
 // ---- Drawing ----
@@ -381,6 +416,19 @@ const TILE = 64;
 const P_COLORS = ["#66ffcc", "#ff8844"];
 
 function drawVehicle(x, y, w, h, type, dir) {
+  const spr = SPRITES[type];
+  if (spr) {
+    // Keep the sprite's aspect ratio; width matches the server hitbox
+    const dh = Math.min(w * spr.height / spr.width, h * 1.6);
+    ctx.save();
+    ctx.translate(x, y);
+    if (dir < 0) ctx.scale(-1, 1);
+    ctx.fillStyle = "rgba(0,0,0,0.3)";
+    ctx.beginPath(); ctx.ellipse(0, dh*0.42, w*0.48, dh*0.1, 0, 0, Math.PI*2); ctx.fill();
+    ctx.drawImage(spr, -w/2, -dh/2, w, dh);
+    ctx.restore();
+    return;
+  }
   ctx.save();
   ctx.translate(x, y);
   if (dir < 0) ctx.scale(-1, 1);
@@ -411,6 +459,23 @@ function drawChicken(x, y, size, seat, hitCooldown, finished, dead) {
   if (hitCooldown) {
     // Flicker when hit
     ctx.globalAlpha = 0.3 + 0.7 * Math.abs(Math.sin(Date.now() * 0.025));
+  }
+  const spr = SPRITES[seat === 0 ? "chicken_p1" : "chicken_p2"];
+  if (spr) {
+    const s = size * 1.5;
+    // Player ring on the ground so each chicken is easy to tell apart
+    ctx.beginPath(); ctx.ellipse(0, size*0.6, size*0.5, size*0.16, 0, 0, Math.PI*2);
+    ctx.fillStyle = "rgba(0,0,0,0.3)"; ctx.fill();
+    ctx.strokeStyle = P_COLORS[seat]; ctx.lineWidth = 3; ctx.stroke();
+    ctx.drawImage(spr, -s/2, size*0.7 - s, s, s);
+    if (finished) {
+      ctx.globalAlpha = 1;
+      ctx.font = `${size*0.7}px serif`;
+      ctx.textAlign = "center";
+      ctx.fillText("👑", 0, size*0.7 - s);
+    }
+    ctx.restore();
+    return;
   }
   const bodyColor = seat === 0 ? "#F5E642" : "#FF9933";
   const outlineColor = seat === 0 ? "#8B7000" : "#8B4000";
@@ -457,6 +522,13 @@ function drawChicken(x, y, size, seat, hitCooldown, finished, dead) {
 function drawCoin(x, y, r) {
   const yy = y + Math.sin(Date.now()*0.004 + x*0.05)*4;
   ctx.save(); ctx.translate(x,yy);
+  if (SPRITES.coin) {
+    const s = r * 2.8;
+    ctx.rotate(Math.sin(Date.now()*0.003 + x)*0.2);
+    ctx.drawImage(SPRITES.coin, -s/2, -s/2, s, s);
+    ctx.restore();
+    return;
+  }
   ctx.beginPath();
   for (let i=0;i<5;i++) {
     const a=i*Math.PI*2/5-Math.PI/2, b=a+Math.PI/5;
@@ -491,17 +563,20 @@ function render() {
     const lane = lanes[i];
     const laneY = i * laneH;
 
+    const grass = pattern("grass");
     if (lane.type === "safe") {
-      ctx.fillStyle = "#3d7a3d"; ctx.fillRect(0,laneY,W,laneH);
-      ctx.strokeStyle="rgba(0,0,0,0.1)"; ctx.lineWidth=1;
-      for(let gx=0;gx<W;gx+=18){ctx.beginPath();ctx.moveTo(gx,laneY);ctx.lineTo(gx,laneY+laneH);ctx.stroke();}
+      ctx.fillStyle = grass || "#3d7a3d"; ctx.fillRect(0,laneY,W,laneH);
+      if (!grass) {
+        ctx.strokeStyle="rgba(0,0,0,0.1)"; ctx.lineWidth=1;
+        for(let gx=0;gx<W;gx+=18){ctx.beginPath();ctx.moveTo(gx,laneY);ctx.lineTo(gx,laneY+laneH);ctx.stroke();}
+      }
     } else if (lane.type === "goal") {
-      ctx.fillStyle = "#2d6e2d"; ctx.fillRect(0,laneY,W,laneH);
+      ctx.fillStyle = grass || "#2d6e2d"; ctx.fillRect(0,laneY,W,laneH);
       ctx.fillStyle="#FFD700";
       for(let gx=0;gx<W;gx+=32){ctx.fillRect(gx,laneY,16,5);ctx.fillRect(gx+16,laneY+laneH-5,16,5);}
       ctx.fillStyle="rgba(255,215,0,0.1)"; ctx.fillRect(0,laneY,W,laneH);
     } else {
-      ctx.fillStyle="#2a2a2a"; ctx.fillRect(0,laneY,W,laneH);
+      ctx.fillStyle = pattern("asphalt") || "#2a2a2a"; ctx.fillRect(0,laneY,W,laneH);
       ctx.strokeStyle="rgba(255,220,0,0.4)"; ctx.lineWidth=2; ctx.setLineDash([20,14]);
       ctx.beginPath(); ctx.moveTo(0,laneY+laneH/2); ctx.lineTo(W,laneY+laneH/2); ctx.stroke();
       ctx.setLineDash([]);

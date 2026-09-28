@@ -57,6 +57,16 @@ function newPlayer(seat, isBot=false) {
   };
 }
 
+// ---- Worker entry: /…/ws/<room> -> one Durable Object per room, everything else -> static files ----
+export default {
+  async fetch(req, env) {
+    const url = new URL(req.url);
+    const m = url.pathname.match(/\/ws\/([A-Za-z0-9_-]{1,32})$/);
+    if (m) return env.GAME.get(env.GAME.idFromName(m[1])).fetch(req);
+    return env.ASSETS.fetch(req);
+  },
+};
+
 export class GameServer extends DurableObject {
   constructor(ctx, env) {
     super(ctx, env);
